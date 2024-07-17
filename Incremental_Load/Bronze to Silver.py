@@ -42,11 +42,11 @@
 
 # MAGIC %sql
 # MAGIC -- Use a timestamp that is before or at the latest available timestamp
-# MAGIC SELECT * FROM table_changes('customers', '2024-07-17 12:00:01')
+# MAGIC SELECT * FROM table_changes('customers', '2024-07-17 19:30:00')
 
 # COMMAND ----------
 
-customers_df = spark.sql("SELECT * FROM table_changes('customers', '2024-07-17 12:00:01')")
+customers_df = spark.sql("SELECT * FROM table_changes('customers', '2024-07-17 19:30:00')")
 display(customers_df)
 
 # COMMAND ----------
@@ -104,7 +104,7 @@ spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
 
 # COMMAND ----------
 
-orders_df = spark.sql("SELECT * FROM table_changes('orders', '2024-07-17 12:00:01')")
+orders_df = spark.sql("SELECT * FROM table_changes('orders', '2024-07-17 19:30:00')")
 display(orders_df)
 
 # COMMAND ----------
@@ -153,7 +153,7 @@ spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
 # COMMAND ----------
 
 
-payments_df = spark.sql("SELECT * FROM table_changes('payments', '2024-07-17 12:00:01')")
+payments_df = spark.sql("SELECT * FROM table_changes('payments', '2024-07-17 19:30:00')")
 display(payments_df)
 
 # COMMAND ----------
@@ -174,7 +174,7 @@ payments_df.createOrReplaceTempView("payments_df")
 # COMMAND ----------
 
 
-orderitems_df = spark.sql("SELECT * FROM table_changes('order_items', '2024-07-17 12:00:01')")
+orderitems_df = spark.sql("SELECT * FROM table_changes('order_items', '2024-07-17 19:30:00')")
 display(orderitems_df)
 
 # COMMAND ----------
@@ -186,9 +186,30 @@ orderitems_df.createOrReplaceTempView("orderitems_df")
 
 # COMMAND ----------
 
+orderitems_dff.createOrReplaceTempView("orderitems_dff")
+duplicates_df = spark.sql("""
+    SELECT *
+    FROM (
+        SELECT *, COUNT(*) OVER (PARTITION BY OrderItemID) AS duplicate_count
+        FROM orderitems_dff
+    ) subquery
+    WHERE duplicate_count > 1
+""")
+display(duplicates_df)
+
+# COMMAND ----------
+
+# Drop duplicates from orderitems_df based on OrderItemID
+orderitems_dff = orderitems_df.join(duplicates_df, on="OrderItemID", how="left_anti")
+
+# Display the updated orderitems_df
+display(orderitems_dff)
+
+# COMMAND ----------
+
 # MAGIC %sql
-# MAGIC MERGE INTO msklenq.silver.order_items USING orderitems_df
-# MAGIC ON msklenq.silver.order_items.OrderItemID = orderitems_df.OrderItemID
+# MAGIC MERGE INTO msklenq.silver.order_items USING orderitems_dff
+# MAGIC ON msklenq.silver.order_items.OrderItemID = orderitems_dff.OrderItemID
 # MAGIC WHEN MATCHED THEN UPDATE SET *
 # MAGIC WHEN NOT MATCHED THEN INSERT *
 
