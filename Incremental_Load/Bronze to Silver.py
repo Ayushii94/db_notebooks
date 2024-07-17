@@ -51,6 +51,11 @@ display(customers_df)
 
 # COMMAND ----------
 
+customers_df = customers_df.drop("_change_type", "_commit_version", "_commit_timestamp")
+display(customers_df)
+
+# COMMAND ----------
+
 from pyspark.sql.functions import col, sum
 
 missing_values = customers_df.select([sum(col(c).isNull().cast("int")).alias(c) for c in customers_df.columns])
@@ -77,26 +82,115 @@ print(f"Number of duplicate customer_ids: {duplicate_count}")
 
 # COMMAND ----------
 
+# Assuming customers_df is your DataFrame
+customers_df.createOrReplaceTempView("customers_df")
+
+# Enable schema evolution
+spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+
+# COMMAND ----------
+
 # MAGIC %sql
-# MAGIC MERGE INTO silver.customers AS sc
-# MAGIC USING customers_df AS bc
-# MAGIC ON sc.customer_id = bc.customer_id
-# MAGIC WHEN MATCHED THEN
-# MAGIC   UPDATE SET *
-# MAGIC WHEN NOT MATCHED THEN
-# MAGIC   INSERT *
-# MAGIC WHEN NOT MATCHED BY SOURCE THEN
-# MAGIC   UPDATE SET sc.* = bc.*;
+# MAGIC MERGE INTO msklenq.silver.customers USING customers_df
+# MAGIC ON msklenq.silver.customers.CustomerId = customers_df.CustomerId
+# MAGIC WHEN MATCHED THEN UPDATE SET *
+# MAGIC WHEN NOT MATCHED THEN INSERT *
 # MAGIC
 
 # COMMAND ----------
 
 # MAGIC %sql
-# MAGIC ALTER TABLE silver.customers SET TBLPROPERTIES (
-# MAGIC   delta.autoOptimize.optimizeWrite = true,
-# MAGIC   delta.autoOptimize.autoCompact = true,
-# MAGIC   delta.enableChangeDataFeed = true
-# MAGIC );
+# MAGIC select * from silver.customers
+
+# COMMAND ----------
+
+orders_df = spark.sql("SELECT * FROM table_changes('orders', '2024-07-17 12:00:01')")
+display(orders_df)
+
+# COMMAND ----------
+
+from pyspark.sql.functions import col, sum
+
+missing_values = orders_df.select([sum(col(c).isNull().cast("int")).alias(c) for c in orders_df.columns])
+display(missing_values)
+
+# Check for Duplicates
+duplicate_count = orders_df.groupBy(orders_df.columns).count().filter("count > 1").count()
+print(f"Number of duplicate rows: {duplicate_count}")
+
+# Summary Statistics
+summary_stats = orders_df.describe()
+display(summary_stats)
+
+# Check for duplicates in the OrderID column
+duplicates = orders_df.groupBy("OrderID").count().filter("count > 1")
+
+# Display the duplicate OrderID
+display(duplicates)
+
+# Optionally, count the number of duplicate OrderID
+duplicate_count = duplicates.count()
+print(f"Number of duplicate OrderID: {duplicate_count}")
+
+# COMMAND ----------
+
+orders_df = orders_df.drop("_change_type", "_commit_version", "_commit_timestamp")
+
+# Assuming orders_df is your DataFrame
+orders_df.createOrReplaceTempView("orders_df")
+
+# Enable schema evolution
+spark.conf.set("spark.databricks.delta.schema.autoMerge.enabled", "true")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC MERGE INTO msklenq.silver.orders USING orders_df
+# MAGIC ON msklenq.silver.orders.OrderID = orders_df.OrderID
+# MAGIC WHEN MATCHED THEN UPDATE SET *
+# MAGIC WHEN NOT MATCHED THEN INSERT *
+
+# COMMAND ----------
+
+
+payments_df = spark.sql("SELECT * FROM table_changes('payments', '2024-07-17 12:00:01')")
+display(payments_df)
+
+# COMMAND ----------
+
+payments_df = payments_df.drop("_change_type", "_commit_version", "_commit_timestamp")
+
+# Assuming payments_df is your DataFrame
+payments_df.createOrReplaceTempView("payments_df")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC MERGE INTO msklenq.silver.payments USING payments_df
+# MAGIC ON msklenq.silver.payments.PaymentID = payments_df.PaymentID
+# MAGIC WHEN MATCHED THEN UPDATE SET *
+# MAGIC WHEN NOT MATCHED THEN INSERT *
+
+# COMMAND ----------
+
+
+orderitems_df = spark.sql("SELECT * FROM table_changes('order_items', '2024-07-17 12:00:01')")
+display(orderitems_df)
+
+# COMMAND ----------
+
+orderitems_df = orderitems_df.drop("_change_type", "_commit_version", "_commit_timestamp")
+
+# Assuming orderitems_df is your DataFrame
+orderitems_df.createOrReplaceTempView("orderitems_df")
+
+# COMMAND ----------
+
+# MAGIC %sql
+# MAGIC MERGE INTO msklenq.silver.order_items USING orderitems_df
+# MAGIC ON msklenq.silver.order_items.OrderItemID = orderitems_df.OrderItemID
+# MAGIC WHEN MATCHED THEN UPDATE SET *
+# MAGIC WHEN NOT MATCHED THEN INSERT *
 
 # COMMAND ----------
 
