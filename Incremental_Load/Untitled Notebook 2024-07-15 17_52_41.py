@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %sql
-# MAGIC use schema silver
+# MAGIC use schema bronze
 
 # COMMAND ----------
 
@@ -60,7 +60,7 @@ display(dbutils.fs.ls("/mnt/ayushi_ecom/Updated_Customers"))
 
 # MAGIC %sql
 # MAGIC -- Use a timestamp that is before or at the latest available timestamp
-# MAGIC SELECT * FROM table_changes('ordereg', '2024-07-16 13:40:01', '2024-07-16 13:45:01')
+# MAGIC SELECT * FROM table_changes('ordereg', '2024-07-17 02:00:01')
 
 # COMMAND ----------
 
