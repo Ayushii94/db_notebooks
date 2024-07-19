@@ -16,7 +16,7 @@
 
 # COMMAND ----------
 
-customers_df = spark.table(spark.sql("SELECT * FROM table_changes('customers', '2024-07-17 19:34:00')"))
+customers_df = spark.sql("SELECT * FROM table_changes('customers', '2024-07-17 19:34:00')")
 display(customers_df)
 
 # COMMAND ----------
@@ -112,14 +112,15 @@ final_result.createOrReplaceTempView("final_result")
 # MAGIC            ra.TotalOrders = ra.TotalOrders+fr.TotalOrders,
 # MAGIC            ra.TotalProductsSold = ra.TotalProductsSold+fr.TotalProductsSold,
 # MAGIC            ra.TotalProductsReturned = ra.TotalProductsReturned+fr.TotalProductsReturned,
-# MAGIC            ra.ReturnRate = fr.ReturnRate,
+# MAGIC            ra.ReturnRate = ra.ReturnRate,
 # MAGIC            ra.TotalRevenue = ra.TotalRevenue+fr.TotalRevenue,
 # MAGIC            ra.AvgDeliveryTime = fr.AvgDeliveryTime
 # MAGIC WHEN NOT MATCHED THEN INSERT *
 
 # COMMAND ----------
 
-
+# MAGIC %sql
+# MAGIC select * from gold.Regional_analysis
 
 # COMMAND ----------
 
