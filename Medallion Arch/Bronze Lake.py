@@ -41,3 +41,10 @@ for table in Tables:
     COPY_OPTIONS("mergeSchema" = "true")
     """
     spark.sql(copy_into_query)
+
+# COMMAND ----------
+
+# enabling change data feed for each bronze table
+for table in Tables:
+    sql = "ALTER TABLE bronze.{} SET TBLPROPERTIES (delta.enableChangeDataFeed = true)".format(table)
+    spark.sql(sql)
